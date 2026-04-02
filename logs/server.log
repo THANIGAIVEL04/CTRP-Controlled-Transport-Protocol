@@ -1,0 +1,2 @@
+{"event":"status","msg":"Server binding to 127.0.0.1:9000","timestamp":1772883537212}
+{"event":"handshake_wait","role":"server","timestamp":1772883537213}

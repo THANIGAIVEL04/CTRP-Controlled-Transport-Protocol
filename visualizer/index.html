@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CTRP Protocol Visualizer</title>
+    <meta name="description" content="Educational Transport Protocol Simulation - CTRP Protocol Visualizer">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <link rel="stylesheet" href="visualizer.css">
+</head>
+
+<body class="theme-bw" id="app-body">
+    <!-- ===== NETWORK BACKGROUND CANVAS ===== -->
+    <canvas id="network-bg-canvas"></canvas>
+
+    <!-- ===== SPLASH SCREEN ===== -->
+    <div id="splash-screen">
+        <div class="splash-content">
+            <div class="splash-ctrp-text" id="splash-ctrp-text">CTRP</div>
+        </div>
+    </div>
+
+    <!-- ===== MAIN APP ===== -->
+    <div id="main-app" style="display:none;">
+
+        <!-- Header -->
+        <header class="app-header" id="app-header">
+            <div class="header-left">
+                <div class="header-logo">
+                    <svg width="28" height="28" viewBox="0 0 100 100" fill="none">
+                        <rect x="8" y="8" width="84" height="84" rx="12" stroke="currentColor" stroke-width="5"
+                            fill="none" />
+                        <path d="M20 50 Q35 30 50 50 T80 50" stroke="currentColor" stroke-width="4"
+                            stroke-linecap="round" fill="none" />
+                        <circle cx="50" cy="50" r="5" fill="currentColor" />
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="header-title">CTRP Visualizer</h1>
+                    <p class="header-sub">Protocol Simulation Engine</p>
+                </div>
+            </div>
+            <nav class="header-nav" id="main-nav">
+                <button class="nav-tab" data-tab="home">Home</button>
+                <button class="nav-tab active" data-tab="pipeline">Visualizer</button>
+                <button class="nav-tab auth-required" data-tab="dashboard" style="display:none;">Dashboard</button>
+                <button class="nav-tab auth-required" data-tab="history" style="display:none;">History</button>
+                <button class="nav-tab auth-required" data-tab="profile" style="display:none;">Profile</button>
+            </nav>
+            <div class="header-actions">
+                <div id="auth-container">
+                    <button id="google-login-btn" class="google-login-btn">
+                        <i class="fa-brands fa-google"></i> Login with Google
+                    </button>
+                    <div id="user-profile-menu" class="user-profile-menu" style="display:none;">
+                        <img id="user-profile-pic" src="" alt="Profile" class="profile-pic-sm">
+                        <div class="profile-dropdown" id="profile-dropdown">
+                            <div class="profile-dropdown-name" id="dropdown-name">User Name</div>
+                            <div class="profile-dropdown-email" id="dropdown-email">user@email.com</div>
+                            <div class="dropdown-divider"></div>
+                            <button id="logout-btn" class="logout-btn"><i class="fa-solid fa-right-from-bracket"></i>
+                                Logout</button>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="icon-btn" id="theme-btn" title="Change Theme">
+                    <i class="fa-solid fa-palette"></i>
+                </button>
+                <!-- Theme Dropdown -->
+                <div class="theme-dropdown" id="theme-dropdown">
+                    <div class="theme-option active" data-theme="theme-bw">
+                        <span class="theme-preview" style="background:#fff; border:1px solid #000;"></span>
+                        Black &amp; White
+                    </div>
+                    <div class="theme-option" data-theme="theme-dark">
+                        <span class="theme-preview" style="background:#0d1117; border:1px solid #30363d;"></span>
+                        Dark Mode
+                    </div>
+                    <div class="theme-option" data-theme="theme-gray">
+                        <span class="theme-preview" style="background:#f4f4f5; border:1px solid #a1a1aa;"></span>
+                        Soft Gray
+                    </div>
+                    <div class="theme-option" data-theme="theme-blue">
+                        <span class="theme-preview" style="background:#eff6ff; border:1px solid #3b82f6;"></span>
+                        Minimal Blue
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- ===== PIPELINE TAB ===== -->
+        <div class="tab-panel active" id="tab-pipeline">
+
+            <!-- Input bar (fixed above pipeline, never scrolls) -->
+            <div class="input-bar" id="input-panel">
+                <div class="input-row">
+                    <input type="text" id="msg-input" class="msg-input" placeholder="Type a message..." maxlength="500">
+                    <label class="file-btn" title="Attach file">
+                        <i class="fa-solid fa-paperclip"></i>
+                        <input type="file" id="file-input" accept="image/*,audio/*,video/*,.pdf,.doc,.docx,.txt,.zip"
+                            style="display:none;">
+                    </label>
+                    <button class="send-btn" id="send-btn-start">
+                        START
+                    </button>
+                </div>
+                <div id="file-preview" class="file-preview" style="display:none;">
+                    <i class="fa-solid fa-file"></i>
+                    <span id="file-name"></span>
+                    <button id="clear-file" class="clear-btn"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+            </div>
+
+            <!-- Pipeline body (TOP: client, DIVIDER: network, BOTTOM: server) -->
+            <div class="pipeline-body" id="pipeline-body">
+
+                <!-- TOP: Client Side -->
+                <div class="pipeline-section" id="client-section">
+                    <div class="section-label">CLIENT SIDE</div>
+                    <div class="phase-row">
+                        <div class="phase-box" id="phase-client-app" data-phase="client-app">
+                            <div class="phase-header">
+                                <div class="phase-dot"></div>
+                                <span class="phase-name">Client Application</span>
+                                <i class="fa-solid fa-chevron-down phase-chevron"></i>
+                            </div>
+                            <div class="phase-body">
+                                <div class="phase-step">User data prepared for transmission</div>
+                                <div class="phase-step">Message serialization (UTF-8 / binary)</div>
+                                <div class="phase-step">Metadata tagging (timestamp, size, type)</div>
+                                <div class="phase-algo">Format: [TYPE][SIZE][PAYLOAD]</div>
+                            </div>
+                        </div>
+                        <div class="phase-col-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+                        <div class="phase-box" id="phase-ctrp-client" data-phase="ctrp-client">
+                            <div class="phase-header">
+                                <div class="phase-dot"></div>
+                                <span class="phase-name">CTRP Client Layer</span>
+                                <i class="fa-solid fa-chevron-down phase-chevron"></i>
+                            </div>
+                            <div class="phase-body">
+                                <div class="phase-step">Protocol version negotiation</div>
+                                <div class="phase-step">Connection state management</div>
+                                <div class="phase-step">Sequence number assignment</div>
+                                <div class="phase-algo">SEQ_NO = prev_seq + payload_len</div>
+                            </div>
+                        </div>
+                        <div class="phase-col-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+                        <div class="phase-box" id="phase-handshake" data-phase="handshake">
+                            <div class="phase-header">
+                                <div class="phase-dot"></div>
+                                <span class="phase-name">Handshake</span>
+                                <i class="fa-solid fa-chevron-down phase-chevron"></i>
+                            </div>
+                            <div class="phase-body">
+                                <div class="phase-step">ClientHello: protocol version + nonce</div>
+                                <div class="phase-step">ServerHello: session params + server nonce</div>
+                                <div class="phase-step">Key negotiation via ECDH (P-256)</div>
+                                <div class="phase-step">Certificate exchange + validation</div>
+                                <div class="phase-algo">ECDH(client_priv, server_pub) = shared_secret</div>
+                            </div>
+                        </div>
+                        <div class="phase-col-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+                        <div class="phase-box" id="phase-session" data-phase="session">
+                            <div class="phase-header">
+                                <div class="phase-dot"></div>
+                                <span class="phase-name">Session Key Gen</span>
+                                <i class="fa-solid fa-chevron-down phase-chevron"></i>
+                            </div>
+                            <div class="phase-body">
+                                <div class="phase-step">HKDF key derivation from shared secret</div>
+                                <div class="phase-step">Session key = HKDF(shared, salt, info)</div>
+                                <div class="phase-step">IV/nonce generation (96-bit random)</div>
+                                <div class="phase-step">Key material stored in secure memory</div>
+                                <div class="phase-algo">HKDF-SHA256 -> 32-byte session key</div>
+                            </div>
+                        </div>
+                        <div class="phase-col-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+                        <div class="phase-box" id="phase-framing" data-phase="framing">
+                            <div class="phase-header">
+                                <div class="phase-dot"></div>
+                                <span class="phase-name">Packet Framing</span>
+                                <i class="fa-solid fa-chevron-down phase-chevron"></i>
+                            </div>
+                            <div class="phase-body">
+                                <div class="phase-step">Divide payload into 32KB chunks</div>
+                                <div class="phase-step">Add CTRP header: [magic][type][seq][len]</div>
+                                <div class="phase-step">Append CRC32 checksum per frame</div>
+                                <div class="phase-step">Assign fragment ID for reassembly</div>
+                                <div class="phase-algo">Frame: magic | type | seq | len | payload | CRC</div>
+                            </div>
+                        </div>
+                        <div class="phase-col-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+                        <div class="phase-box" id="phase-encryption" data-phase="encryption">
+                            <div class="phase-header">
+                                <div class="phase-dot"></div>
+                                <span class="phase-name">Encryption Layer</span>
+                                <i class="fa-solid fa-chevron-down phase-chevron"></i>
+                            </div>
+                            <div class="phase-body">
+                                <div class="phase-step">Plaintext payload received</div>
+                                <div class="phase-step">AES-256-GCM encryption applied</div>
+                                <div class="phase-step">Authentication tag (128-bit) generated</div>
+                                <div class="phase-step">Ciphertext + tag appended to frame</div>
+                                <div class="phase-algo">Ciphertext = AES-GCM(key, IV, plaintext)</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- NETWORK DIVIDER -->
+                <div class="network-divider" id="network-divider">
+                    <div class="net-line"></div>
+                    <div class="net-center">
+                        <div class="net-label-top">UDP TRANSPORT</div>
+                        <div class="net-badge">NETWORK</div>
+                        <div class="net-label-bot">IPv4/UDP</div>
+                        <!-- animated packet travels horizontally across the wire -->
+                        <div class="net-packet" id="anim-packet" style="display:none;"></div>
+                    </div>
+                    <div class="net-line"></div>
+                </div>
+
+                <!-- BOTTOM: Server Side -->
+                <div class="pipeline-section" id="server-section">
+                    <div class="section-label">SERVER SIDE</div>
+                    <div class="phase-row">
+                        <div class="phase-box" id="phase-udp-rx" data-phase="udp-rx">
+                            <div class="phase-header">
+                                <div class="phase-dot"></div>
+                                <span class="phase-name">UDP Receiver</span>
+                                <i class="fa-solid fa-chevron-down phase-chevron"></i>
+                            </div>
+                            <div class="phase-body">
+                                <div class="phase-step">Bind socket to UDP port 9000</div>
+                                <div class="phase-step">Receive datagram from network</div>
+                                <div class="phase-step">Validate source IP and port</div>
+                                <div class="phase-step">Buffer incoming frame data</div>
+                                <div class="phase-algo">recvfrom() -> (bytes, addr)</div>
+                            </div>
+                        </div>
+                        <div class="phase-col-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+                        <div class="phase-box" id="phase-ctrp-server" data-phase="ctrp-server">
+                            <div class="phase-header">
+                                <div class="phase-dot"></div>
+                                <span class="phase-name">CTRP Server Layer</span>
+                                <i class="fa-solid fa-chevron-down phase-chevron"></i>
+                            </div>
+                            <div class="phase-body">
+                                <div class="phase-step">Parse CTRP header fields</div>
+                                <div class="phase-step">Validate magic bytes (0xCTRP)</div>
+                                <div class="phase-step">Check version compatibility</div>
+                                <div class="phase-step">Route to appropriate handler</div>
+                                <div class="phase-algo">Frame parse: magic check -> type dispatch</div>
+                            </div>
+                        </div>
+                        <div class="phase-col-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+                        <div class="phase-box" id="phase-server-hs" data-phase="server-hs">
+                            <div class="phase-header">
+                                <div class="phase-dot"></div>
+                                <span class="phase-name">Server Handshake</span>
+                                <i class="fa-solid fa-chevron-down phase-chevron"></i>
+                            </div>
+                            <div class="phase-body">
+                                <div class="phase-step">Receive ClientHello, validate version</div>
+                                <div class="phase-step">Generate server nonce + DH public key</div>
+                                <div class="phase-step">Send ServerHello with params</div>
+                                <div class="phase-step">ECDH key agreement computation</div>
+                                <div class="phase-algo">shared_secret = ECDH(server_priv, client_pub)</div>
+                            </div>
+                        </div>
+                        <div class="phase-col-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+                        <div class="phase-box" id="phase-decryption" data-phase="decryption">
+                            <div class="phase-header">
+                                <div class="phase-dot"></div>
+                                <span class="phase-name">Decryption Layer</span>
+                                <i class="fa-solid fa-chevron-down phase-chevron"></i>
+                            </div>
+                            <div class="phase-body">
+                                <div class="phase-step">Extract IV and auth tag from frame</div>
+                                <div class="phase-step">AES-256-GCM decryption</div>
+                                <div class="phase-step">Verify authentication tag integrity</div>
+                                <div class="phase-step">Recover plaintext payload</div>
+                                <div class="phase-algo">Plaintext = AES-GCM-Dec(key, IV, ciphertext, tag)</div>
+                            </div>
+                        </div>
+                        <div class="phase-col-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+                        <div class="phase-box" id="phase-flow" data-phase="flow">
+                            <div class="phase-header">
+                                <div class="phase-dot"></div>
+                                <span class="phase-name">Flow Control</span>
+                                <i class="fa-solid fa-chevron-down phase-chevron"></i>
+                            </div>
+                            <div class="phase-body">
+                                <div class="phase-step">Verify sequence number ordering</div>
+                                <div class="phase-step">Update receive window (RWND)</div>
+                                <div class="phase-step">Detect duplicate/out-of-order packets</div>
+                                <div class="phase-step">Generate selective ACK (SACK)</div>
+                                <div class="phase-algo">ACK_NUM = expected_seq | RWND = buffer_free</div>
+                            </div>
+                        </div>
+                        <div class="phase-col-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+                        <div class="phase-box" id="phase-server-app" data-phase="server-app">
+                            <div class="phase-header">
+                                <div class="phase-dot"></div>
+                                <span class="phase-name">Server Application</span>
+                                <i class="fa-solid fa-chevron-down phase-chevron"></i>
+                            </div>
+                            <div class="phase-body">
+                                <div class="phase-step">Reassemble fragmented payload</div>
+                                <div class="phase-step">Deliver data to application layer</div>
+                                <div class="phase-step">Log delivery confirmation</div>
+                                <div class="phase-step">Send ACK to client</div>
+                                <div class="phase-algo">Status: DELIVERED | ACK sent to client</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div><!-- end pipeline-body -->
+
+            <!-- Live Terminal -->
+            <div class="terminal-panel" id="terminal-panel">
+                <div class="terminal-header">
+                    <span><i class="fa-solid fa-terminal"></i> Live Terminal</span>
+                    <button class="icon-btn-sm" id="clear-terminal"><i class="fa-solid fa-trash"></i></button>
+                </div>
+                <div class="terminal-body" id="terminal-body">
+                    <div class="terminal-line info">[SYSTEM] CTRP Visualizer ready. Send a message to begin simulation.
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- end tab-pipeline -->
+
+        <!-- ===== HISTORY TAB ===== -->
+        <div class="tab-panel" id="tab-history">
+            <div class="history-layout">
+                <div class="history-header-row">
+                    <h2 class="section-title">Simulation History</h2>
+                    <button class="save-btn" id="save-sim-btn" disabled>
+                        <i class="fa-solid fa-floppy-disk"></i> Save Current
+                    </button>
+                </div>
+                <div id="history-list" class="history-list">
+                    <div class="history-empty">
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+                        <p>No simulations saved yet.</p>
+                        <p class="history-empty-sub">Run a simulation and click "Save Current" to store it here.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== DASHBOARD TAB ===== -->
+        <div class="tab-panel" id="tab-dashboard">
+            <h2 class="section-title">User Dashboard</h2>
+            <div class="dashboard-layout">
+                <div class="dashboard-card dash-profile">
+                    <h3>Profile</h3>
+                    <div class="dash-user-info">
+                        <img id="dash-pic" src="" alt="Profile">
+                        <div>
+                            <p id="dash-name" class="dash-name">User</p>
+                            <p id="dash-email" class="dash-email">email@test.com</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="dashboard-card dash-stats">
+                    <h3>Simulation Statistics</h3>
+                    <div class="stats-grid">
+                        <div class="stat-box">
+                            <i class="fa-solid fa-server"></i>
+                            <span class="stat-value" id="stat-total">0</span>
+                            <span class="stat-label">Total Simulations</span>
+                        </div>
+                        <div class="stat-box">
+                            <i class="fa-solid fa-cubes"></i>
+                            <span class="stat-value" id="stat-avg-packets">0</span>
+                            <span class="stat-label">Avg Packet Count</span>
+                        </div>
+                        <div class="stat-box">
+                            <i class="fa-solid fa-bolt"></i>
+                            <span class="stat-value" id="stat-avg-latency">0ms</span>
+                            <span class="stat-label">Avg Latency</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="dashboard-card dash-history-preview">
+                    <h3>Recent Simulations</h3>
+                    <div id="dash-history-list" class="history-list"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== HOME TAB ===== -->
+        <div class="tab-panel" id="tab-home">
+            <div class="home-layout">
+                <h1 class="hero-title">CTRP Simulation Engine</h1>
+                <p class="hero-subtitle">The advanced platform for educational transport protocol visualization.</p>
+                <div class="hero-actions">
+                    <button class="hero-btn primary"
+                        onclick="document.querySelector('[data-tab=\'pipeline\']').click()">Start Visualizer</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== PROFILE TAB ===== -->
+        <div class="tab-panel" id="tab-profile">
+            <div class="profile-layout dashboard-card">
+                <h2>Account Settings</h2>
+                <div class="profile-details-list">
+                    <p><strong>Name:</strong> <span id="prof-name"></span></p>
+                    <p><strong>Email:</strong> <span id="prof-email"></span></p>
+                    <p><strong>Account ID:</strong> <span id="prof-id"></span></p>
+                </div>
+                <button class="logout-btn-large" id="logout-btn-2">Logout</button>
+            </div>
+        </div>
+
+    </div><!-- end main-app -->
+
+    <!-- ===== FULL SCREEN ENTITY MODAL ===== -->
+    <div id="fs-modal" class="fs-modal">
+        <div class="fs-overlay" id="fs-overlay"></div>
+        <div class="fs-container">
+            <div class="fs-header">
+                <div class="fs-header-left">
+                    <div class="fs-dot"></div>
+                    <h2 id="fs-title" class="fs-title">Entity Name</h2>
+                </div>
+                <button class="fs-close" id="fs-close" title="Close (Esc)">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="fs-body" id="fs-body">
+                <!-- Content injected via JS -->
+            </div>
+            <div class="fs-footer">
+                <button class="fs-nav-btn" id="fs-prev">
+                    <i class="fa-solid fa-arrow-left"></i> Previous
+                </button>
+                <div class="fs-nav-indicator" id="fs-indicator">Entity 1 of 12</div>
+                <button class="fs-nav-btn" id="fs-next">
+                    Next <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="visualizer.js"></script>
+</body>
+
+</html>
