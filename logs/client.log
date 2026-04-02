@@ -1,2 +1,0 @@
-{"event":"status","msg":"Client connecting to 127.0.0.1:8080","timestamp":1772549607647}
-{"event":"handshake_start","role":"client","target":"127.0.0.1:8080","timestamp":1772549607648}
